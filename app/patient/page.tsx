@@ -5,13 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { Calendar, FileText, Activity, BookOpen, History, Heart, Building2 } from "lucide-react"
 
 export default function PatientDashboard() {
   const [patientData, setPatientData] = useState<any>(null)
-  const [upcomingAppointments, setUpcomingAppointments] = useState([])
-  const [recentRecords, setRecentRecords] = useState([])
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
+  const [recentRecords, setRecentRecords] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [needsHospitalSelection, setNeedsHospitalSelection] = useState(false)
+  const [hospitalName, setHospitalName] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -21,14 +26,27 @@ export default function PatientDashboard() {
       } = await supabase.auth.getUser()
 
       if (user) {
-        // Fetch patient profile
+        // Fetch patient profile with hospital info
         const { data: patient } = await supabase
           .from("patients")
-          .select("*, profiles!inner(*)")
+          .select(`
+            *, 
+            profiles!inner(*),
+            hospitals(id, name)
+          `)
           .eq("profile_id", user.id)
           .single()
 
         setPatientData(patient)
+        
+        // Check if patient has selected a hospital
+        if (!patient?.hospital_id) {
+          setNeedsHospitalSelection(true)
+          setIsLoading(false)
+          return
+        }
+        
+        setHospitalName(patient.hospitals?.name || null)
 
         // Fetch upcoming appointments
         const { data: appointments } = await supabase
@@ -77,6 +95,50 @@ export default function PatientDashboard() {
     )
   }
 
+  if (needsHospitalSelection) {
+    return (
+      <PatientLayout>
+        <div className="space-y-8">
+          <div className="text-center">
+            <Building2 className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+            <h1 className="text-3xl font-serif font-bold text-foreground mb-2">
+              Welcome to HospitALL!
+            </h1>
+            <p className="text-muted-foreground">
+              Before you can access your dashboard and book appointments, please select your preferred hospital.
+            </p>
+          </div>
+          
+          <Card className="max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="text-center">Select Your Hospital</CardTitle>
+              <CardDescription className="text-center">
+                Choose the hospital where you'd like to receive care
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-sm text-gray-600">
+                Selecting a hospital will allow you to:
+              </p>
+              <ul className="text-sm text-gray-600 text-left space-y-1">
+                <li>• Book appointments with doctors</li>
+                <li>• View available medical services</li>
+                <li>• Access your medical records</li>
+                <li>• Connect with healthcare providers</li>
+              </ul>
+              <Button 
+                onClick={() => router.push('/select-hospital')}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Select Hospital Now
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </PatientLayout>
+    )
+  }
+
   return (
     <PatientLayout>
       <div className="space-y-8">
@@ -86,6 +148,9 @@ export default function PatientDashboard() {
             Welcome back, {patientData?.profiles?.full_name}!
           </h1>
           <p className="text-muted-foreground mt-2">Here's an overview of your health information</p>
+          {hospitalName && (
+            <p className="text-sm text-blue-600 mt-1">Receiving care at {hospitalName}</p>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -93,7 +158,7 @@ export default function PatientDashboard() {
           <Card className="text-center">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-1/10 rounded-full flex items-center justify-center mb-2">
-                <span className="text-2xl">📅</span>
+                <Calendar className="h-6 w-6 text-chart-1" />
               </div>
               <CardTitle className="text-lg font-serif">Upcoming Appointments</CardTitle>
             </CardHeader>
@@ -106,7 +171,7 @@ export default function PatientDashboard() {
           <Card className="text-center">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-2/10 rounded-full flex items-center justify-center mb-2">
-                <span className="text-2xl">📋</span>
+                <FileText className="h-6 w-6 text-chart-2" />
               </div>
               <CardTitle className="text-lg font-serif">Medical Records</CardTitle>
             </CardHeader>
@@ -119,7 +184,7 @@ export default function PatientDashboard() {
           <Card className="text-center">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-3/10 rounded-full flex items-center justify-center mb-2">
-                <span className="text-2xl">🩺</span>
+                <Heart className="h-6 w-6 text-chart-3" />
               </div>
               <CardTitle className="text-lg font-serif">Health Status</CardTitle>
             </CardHeader>
@@ -258,25 +323,25 @@ export default function PatientDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="outline" className="h-20 flex-col bg-transparent" asChild>
                   <Link href="/patient/diary">
-                    <span className="text-2xl mb-2">📝</span>
+                    <BookOpen className="h-6 w-6 mb-2 text-blue-600" />
                     <span className="text-sm">Health Diary</span>
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col bg-transparent" asChild>
                   <Link href="/patient/appointments">
-                    <span className="text-2xl mb-2">📅</span>
+                    <Calendar className="h-6 w-6 mb-2 text-green-600" />
                     <span className="text-sm">Appointments</span>
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col bg-transparent" asChild>
                   <Link href="/patient/history">
-                    <span className="text-2xl mb-2">🩺</span>
+                    <Activity className="h-6 w-6 mb-2 text-purple-600" />
                     <span className="text-sm">Medical History</span>
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col bg-transparent" asChild>
                   <Link href="/patient/records">
-                    <span className="text-2xl mb-2">📋</span>
+                    <FileText className="h-6 w-6 mb-2 text-orange-600" />
                     <span className="text-sm">Records</span>
                   </Link>
                 </Button>

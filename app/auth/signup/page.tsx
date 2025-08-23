@@ -37,37 +37,13 @@ export default function SignUpPage() {
     hospitalState: "",
     hospitalZip: "",
     hospitalPhone: "",
-    existingHospitalId: "",
   })
-  const [hospitals, setHospitals] = useState<Hospital[]>([])
-  const [isLoadingHospitals, setIsLoadingHospitals] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  useEffect(() => {
-    if (formData.role === 'patient') {
-      fetchHospitals()
-    }
-  }, [formData.role])
-
-  const fetchHospitals = async () => {
-    setIsLoadingHospitals(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('hospitals')
-      .select('id, name, city, state')
-      .eq('status', 'active')
-      .order('name')
-    
-    if (!error && data) {
-      setHospitals(data)
-    }
-    setIsLoadingHospitals(false)
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -102,10 +78,10 @@ export default function SignUpPage() {
       
       if (authError) throw authError
 
-      // If admin/doctor/nurse, create hospital first
-      let hospitalId = formData.existingHospitalId
+      // If admin, create hospital first and update profile
+      let hospitalId = null
       
-      if ((formData.role === 'admin' || formData.role === 'doctor' || formData.role === 'nurse') && formData.hospitalName) {
+      if (formData.role === 'admin' && formData.hospitalName) {
         const { data: hospitalData, error: hospitalError } = await supabase
           .from('hospitals')
           .insert({
@@ -123,6 +99,36 @@ export default function SignUpPage() {
         
         if (hospitalError) throw hospitalError
         hospitalId = hospitalData.id
+        
+        // Wait a moment for profile to be created by trigger, then update with hospital_id
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Retry profile update with better error handling
+        let retries = 3
+        let updateSuccess = false
+        
+        while (retries > 0 && !updateSuccess) {
+          const { error: updateProfileError } = await supabase
+            .from('profiles')
+            .update({ hospital_id: hospitalId })
+            .eq('id', authData.user?.id)
+          
+          if (!updateProfileError) {
+            updateSuccess = true
+            console.log('Successfully updated admin profile with hospital_id:', hospitalId)
+          } else {
+            console.error('Attempt to update admin profile failed:', updateProfileError)
+            retries--
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+          }
+        }
+        
+        if (!updateSuccess) {
+          console.error('Failed to update admin profile with hospital_id after all retries')
+          // Still proceed since hospital is created, admin can manually fix this later
+        }
       }
 
       router.push("/auth/verify")
@@ -161,9 +167,7 @@ export default function SignUpPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="patient">Patient</SelectItem>
-                    <SelectItem value="doctor">Doctor</SelectItem>
-                    <SelectItem value="nurse">Nurse</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
+                    <SelectItem value="admin">Hospital Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -231,11 +235,12 @@ export default function SignUpPage() {
                 </>
               )}
 
-              {(formData.role === 'admin' || formData.role === 'doctor' || formData.role === 'nurse') && (
+              {formData.role === 'admin' && (
                 <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center space-x-2 mb-3">
                     <Building2 className="h-5 w-5 text-blue-600" />
                     <h3 className="font-medium text-blue-900">Hospital Information</h3>
+                    <p className="text-sm text-blue-700">You will create and manage a hospital</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -309,35 +314,6 @@ export default function SignUpPage() {
                         required
                       />
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {formData.role === 'patient' && (
-                <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Heart className="h-5 w-5 text-red-600" />
-                    <h3 className="font-medium text-red-900">Select Hospital</h3>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="existingHospitalId">Choose Hospital</Label>
-                    <Select 
-                      value={formData.existingHospitalId} 
-                      onValueChange={(value) => handleInputChange("existingHospitalId", value)}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingHospitals ? "Loading hospitals..." : "Select a hospital"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {hospitals.map((hospital: any) => (
-                          <SelectItem key={hospital.id} value={hospital.id}>
-                            {hospital.name} - {hospital.city}, {hospital.state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               )}

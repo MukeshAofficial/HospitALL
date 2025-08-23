@@ -1,6 +1,5 @@
 "use client"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,9 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { Users } from "lucide-react"
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState([])
+  const [staff, setStaff] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
@@ -49,17 +49,14 @@ export default function StaffPage() {
 
   if (isLoading) {
     return (
-      <HospitalLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </HospitalLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
   return (
-    <HospitalLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -136,7 +133,7 @@ export default function StaffPage() {
             ))
           ) : (
             <div className="col-span-full text-center py-12">
-              <div className="text-6xl mb-4">👨‍⚕️</div>
+              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-serif font-medium text-foreground mb-2">No staff found</h3>
               <p className="text-muted-foreground mb-4">
                 {searchTerm ? "No staff members match your search criteria." : "Get started by adding staff members."}
@@ -148,6 +145,5 @@ export default function StaffPage() {
           )}
         </div>
       </div>
-    </HospitalLayout>
   )
 }

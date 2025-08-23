@@ -1,6 +1,5 @@
 "use client"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { MedicalCalendar } from "@/components/medical-calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -75,17 +74,14 @@ export default function SchedulePage() {
 
   if (isLoading) {
     return (
-      <HospitalLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </HospitalLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
     )
   }
 
   return (
-    <HospitalLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -167,6 +163,6 @@ export default function SchedulePage() {
           className="w-full"
         />
       </div>
-    </HospitalLayout>
+    </div>
   )
 }

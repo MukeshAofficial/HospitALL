@@ -24,6 +24,12 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce'
+      }
     },
   )
 
@@ -33,17 +39,34 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getUser() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser()
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // Handle authentication errors gracefully
+    if (error) {
+      console.error('Auth error in middleware:', error.message)
+      // Clear invalid session cookies
+      supabaseResponse.cookies.delete('sb-access-token')
+      supabaseResponse.cookies.delete('sb-refresh-token')
+    }
+
+    if (
+      request.nextUrl.pathname !== "/" &&
+      !user &&
+      !request.nextUrl.pathname.startsWith("/login") &&
+      !request.nextUrl.pathname.startsWith("/auth")
+    ) {
+      // no user, potentially respond by redirecting the user to the login page
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
+  } catch (error) {
+    console.error('Middleware error:', error)
+    // On any error, redirect to login
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     return NextResponse.redirect(url)

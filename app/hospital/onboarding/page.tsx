@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function OnboardingPage() {
   const [formData, setFormData] = useState({
@@ -25,9 +24,59 @@ export default function OnboardingPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [hospitalInfo, setHospitalInfo] = useState<{ id: string; name: string } | null>(null)
+  const [isCheckingHospital, setIsCheckingHospital] = useState(false)
+
+  // Check hospital association on page load
+  useEffect(() => {
+    checkAndAssociateHospital()
+  }, [])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const checkAndAssociateHospital = async () => {
+    setIsCheckingHospital(true)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('No active session')
+      }
+
+      const response = await fetch('/api/admin/associate-hospital', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to associate hospital')
+      }
+
+      setHospitalInfo({
+        id: result.hospital_id,
+        name: result.hospital_name
+      })
+
+      setMessage({
+        type: "success",
+        text: result.message
+      })
+
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: error.message || "Failed to associate hospital"
+      })
+    } finally {
+      setIsCheckingHospital(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,24 +86,41 @@ export default function OnboardingPage() {
 
     try {
       const supabase = createClient()
+      
+      // Get current user's session for authorization
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('No active session')
+      }
 
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: "TempPassword123!", // Temporary password
-        email_confirm: true,
-        user_metadata: {
-          full_name: formData.fullName,
+      // Call our API route for staff creation
+      const response = await fetch('/api/staff/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          fullName: formData.fullName,
           role: formData.role,
           phone: formData.phone,
-        },
+          department: formData.department,
+          specialization: formData.specialization,
+          licenseNumber: formData.licenseNumber,
+          notes: formData.notes
+        })
       })
 
-      if (authError) throw authError
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create staff account')
+      }
 
       setMessage({
         type: "success",
-        text: `Successfully created account for ${formData.fullName}. Temporary password: TempPassword123!`,
+        text: result.message,
       })
       setFormData({
         email: "",
@@ -77,20 +143,52 @@ export default function OnboardingPage() {
   }
 
   return (
-    <HospitalLayout>
-      <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-serif font-bold text-foreground">Staff Onboarding</h1>
           <p className="text-muted-foreground mt-2">Add new healthcare professionals to your team</p>
         </div>
 
-        {/* Onboarding Form */}
+        {/* Hospital Association Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-serif">New Staff Member</CardTitle>
-            <CardDescription>Fill out the information below to create a new staff account</CardDescription>
+            <CardTitle className="text-lg font-serif">Hospital Association</CardTitle>
+            <CardDescription>Ensure you are associated with a hospital before creating staff accounts</CardDescription>
           </CardHeader>
+          <CardContent>
+            {hospitalInfo ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800">
+                  ✓ Associated with: <strong>{hospitalInfo.name}</strong>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800">
+                    ⚠️ You need to be associated with a hospital to create staff accounts.
+                  </p>
+                </div>
+                <Button 
+                  onClick={checkAndAssociateHospital}
+                  disabled={isCheckingHospital}
+                  className="w-full"
+                >
+                  {isCheckingHospital ? 'Checking Hospital Association...' : 'Setup Hospital Association'}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Onboarding Form */}
+        {hospitalInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-serif">New Staff Member</CardTitle>
+              <CardDescription>Fill out the information below to create a new staff account</CardDescription>
+            </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,6 +320,7 @@ export default function OnboardingPage() {
             </form>
           </CardContent>
         </Card>
+        )}
 
         {/* Onboarding Checklist */}
         <Card>
@@ -248,6 +347,5 @@ export default function OnboardingPage() {
           </CardContent>
         </Card>
       </div>
-    </HospitalLayout>
   )
 }

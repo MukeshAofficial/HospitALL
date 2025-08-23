@@ -110,3 +110,63 @@ CREATE INDEX IF NOT EXISTS idx_profiles_hospital_id ON public.profiles(hospital_
 CREATE INDEX IF NOT EXISTS idx_patients_hospital_id ON public.patients(hospital_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_hospital_id ON public.appointments(hospital_id);
 CREATE INDEX IF NOT EXISTS idx_hospitals_status ON public.hospitals(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_role_hospital ON public.profiles(role, hospital_id);
+
+-- Create trigger to automatically assign hospital_id when creating profiles
+CREATE OR REPLACE FUNCTION assign_hospital_to_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- For staff members (doctor, nurse), inherit hospital_id from the admin who created them
+  IF NEW.role IN ('doctor', 'nurse') AND NEW.hospital_id IS NULL THEN
+    -- Get hospital_id from the current user (admin)
+    SELECT hospital_id INTO NEW.hospital_id 
+    FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'admin';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for automatic hospital assignment
+DROP TRIGGER IF EXISTS trigger_assign_hospital_to_profile ON public.profiles;
+CREATE TRIGGER trigger_assign_hospital_to_profile
+  BEFORE INSERT ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION assign_hospital_to_profile();
+
+-- Create function to ensure appointments are within same hospital
+CREATE OR REPLACE FUNCTION validate_appointment_hospital()
+RETURNS TRIGGER AS $$
+DECLARE
+  patient_hospital_id UUID;
+  doctor_hospital_id UUID;
+BEGIN
+  -- Get patient's hospital
+  SELECT p.hospital_id INTO patient_hospital_id
+  FROM public.patients p
+  WHERE p.id = NEW.patient_id;
+  
+  -- Get doctor's hospital
+  SELECT pr.hospital_id INTO doctor_hospital_id
+  FROM public.profiles pr
+  WHERE pr.id = NEW.doctor_id;
+  
+  -- Ensure they are in the same hospital
+  IF patient_hospital_id != doctor_hospital_id THEN
+    RAISE EXCEPTION 'Patient and doctor must be in the same hospital';
+  END IF;
+  
+  -- Set appointment hospital_id
+  NEW.hospital_id := patient_hospital_id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for appointment hospital validation
+DROP TRIGGER IF EXISTS trigger_validate_appointment_hospital ON public.appointments;
+CREATE TRIGGER trigger_validate_appointment_hospital
+  BEFORE INSERT OR UPDATE ON public.appointments
+  FOR EACH ROW
+  EXECUTE FUNCTION validate_appointment_hospital();

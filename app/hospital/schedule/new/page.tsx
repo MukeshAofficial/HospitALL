@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -101,8 +100,7 @@ export default function NewScheduleAppointmentPage() {
   ]
 
   return (
-    <HospitalLayout>
-      <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link href="/hospital/schedule" className="text-primary hover:underline text-sm">
             ← Back to Schedule
@@ -249,6 +247,6 @@ export default function NewScheduleAppointmentPage() {
           </CardContent>
         </Card>
       </div>
-    </HospitalLayout>
+    </div>
   )
 }

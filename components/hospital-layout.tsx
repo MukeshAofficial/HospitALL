@@ -57,6 +57,7 @@ export function HospitalLayout({ children }: HospitalLayoutProps) {
     { name: "Onboarding", href: "/hospital/onboarding", icon: UserCheck },
     { name: "Patients", href: "/hospital/patients", icon: Users },
     { name: "Staff", href: "/hospital/staff", icon: UserCheck },
+    { name: "Staff Management", href: "/hospital/staff-management", icon: Users },
     { name: "Schedule", href: "/hospital/schedule", icon: Calendar },
     { name: "Voice Notes", href: "/hospital/voice-notes", icon: Mic },
     { name: "Files", href: "/hospital/files", icon: FileText },
@@ -77,28 +78,28 @@ export function HospitalLayout({ children }: HospitalLayoutProps) {
                     <p className="text-xs text-gray-500 -mt-1">Healthcare Management</p>
                   </div>
                 </div>
-                <nav className="hidden md:ml-8 md:flex md:space-x-1">
+                <nav className="hidden lg:ml-8 lg:flex lg:space-x-1">
                   {navigation.map((item) => {
                     const IconComponent = item.icon
                     return (
                       <Link
                         key={item.name}
                         href={item.href}
-                        className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                        className={`flex items-center px-2 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                           pathname === item.href
                             ? "bg-blue-100 text-blue-700 shadow-sm"
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                         }`}
                       >
-                        <IconComponent className="h-4 w-4 mr-2" />
-                        {item.name}
+                        <IconComponent className="h-4 w-4 mr-1" />
+                        <span className="hidden xl:inline">{item.name}</span>
                       </Link>
                     )
                   })}
                 </nav>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-700">
+              <div className="flex items-center space-x-6">
+                <div className="text-sm text-gray-700 hidden sm:block">
                   <span className="font-medium">{profile?.full_name}</span>
                   <span className="text-gray-500 ml-1">({profile?.role})</span>
                 </div>
@@ -106,10 +107,10 @@ export function HospitalLayout({ children }: HospitalLayoutProps) {
                   variant="outline" 
                   size="sm" 
                   onClick={handleSignOut}
-                  className="flex items-center space-x-1"
+                  className="flex items-center space-x-1 flex-shrink-0"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
+                  <span className="hidden sm:inline">Sign Out</span>
                 </Button>
               </div>
             </div>

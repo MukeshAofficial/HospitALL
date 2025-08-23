@@ -68,6 +68,45 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
             return
           }
 
+          // For patients, check profile completion first
+          if (profile.role === 'patient') {
+            const currentPath = window.location.pathname
+            
+            // Fetch patient data once
+            const { data: patient, error: patientError } = await supabase
+              .from('patients')
+              .select('hospital_id, date_of_birth, emergency_contact_name')
+              .eq('profile_id', user.id)
+              .single()
+            
+            if (patientError) {
+              console.error("[v0] AuthGuard: Patient fetch error:", patientError)
+              router.push("/auth/login")
+              return
+            }
+            
+            // Skip profile completeness check if already on profile completion page
+            if (currentPath !== '/patient/profile-completion') {
+              // Check if basic profile information is complete
+              if (!patient.date_of_birth || !patient.emergency_contact_name) {
+                console.log("[v0] AuthGuard: Patient profile incomplete, redirecting to profile completion")
+                router.push("/patient/profile-completion")
+                return
+              }
+            }
+
+            // Only check hospital selection for appointment-related routes
+            const appointmentRoutes = ['/patient/appointments', '/patient/appointments/new', '/patient/appointments/book']
+            
+            if (appointmentRoutes.some(route => currentPath.startsWith(route))) {
+              if (!patient.hospital_id) {
+                console.log("[v0] AuthGuard: Patient trying to access appointments without hospital selection")
+                router.push("/select-hospital")
+                return
+              }
+            }
+          }
+
           console.log("[v0] AuthGuard: Role check passed, user role:", profile.role)
         }
 

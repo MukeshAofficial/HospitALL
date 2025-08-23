@@ -1,6 +1,5 @@
 "use client"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { VoiceRecorder } from "@/components/voice-recorder"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -80,8 +79,7 @@ export default function VoiceNotesPage() {
   )
 
   return (
-    <HospitalLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Voice Notes & Transcription</h1>
@@ -235,6 +233,6 @@ export default function VoiceNotesPage() {
           </CardContent>
         </Card>
       </div>
-    </HospitalLayout>
+    </div>
   )
 }

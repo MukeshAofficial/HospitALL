@@ -1,6 +1,5 @@
 "use client"
 
-import { HospitalLayout } from "@/components/hospital-layout"
 import { FileUpload } from "@/components/file-upload"
 import { FileViewer } from "@/components/file-viewer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,8 +38,7 @@ export default function FilesPage() {
   )
 
   return (
-    <HospitalLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">File Management</h1>
@@ -129,6 +127,6 @@ export default function FilesPage() {
           </CardContent>
         </Card>
       </div>
-    </HospitalLayout>
+    </div>
   )
 }
