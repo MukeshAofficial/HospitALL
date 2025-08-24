@@ -1,22 +1,18 @@
 "use client"
 
-import { PatientLayout } from "@/components/patient-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Calendar, FileText, Activity, BookOpen, History, Heart, Building2 } from "lucide-react"
+import { Calendar, FileText, Activity, BookOpen, History, Heart } from "lucide-react"
 
 export default function PatientDashboard() {
   const [patientData, setPatientData] = useState<any>(null)
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
   const [recentRecords, setRecentRecords] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [needsHospitalSelection, setNeedsHospitalSelection] = useState(false)
   const [hospitalName, setHospitalName] = useState<string | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -39,14 +35,9 @@ export default function PatientDashboard() {
 
         setPatientData(patient)
         
-        // Check if patient has selected a hospital
-        if (!patient?.hospital_id) {
-          setNeedsHospitalSelection(true)
-          setIsLoading(false)
-          return
-        }
-        
-        setHospitalName(patient.hospitals?.name || null)
+        // Set hospital name if available
+        const hospitalInfo = Array.isArray(patient?.hospitals) ? patient.hospitals[0] : patient?.hospitals
+        setHospitalName(hospitalInfo?.name || null)
 
         // Fetch upcoming appointments
         const { data: appointments } = await supabase
@@ -87,61 +78,14 @@ export default function PatientDashboard() {
 
   if (isLoading) {
     return (
-      <PatientLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </PatientLayout>
-    )
-  }
-
-  if (needsHospitalSelection) {
-    return (
-      <PatientLayout>
-        <div className="space-y-8">
-          <div className="text-center">
-            <Building2 className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-serif font-bold text-foreground mb-2">
-              Welcome to HospitALL!
-            </h1>
-            <p className="text-muted-foreground">
-              Before you can access your dashboard and book appointments, please select your preferred hospital.
-            </p>
-          </div>
-          
-          <Card className="max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle className="text-center">Select Your Hospital</CardTitle>
-              <CardDescription className="text-center">
-                Choose the hospital where you'd like to receive care
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-sm text-gray-600">
-                Selecting a hospital will allow you to:
-              </p>
-              <ul className="text-sm text-gray-600 text-left space-y-1">
-                <li>• Book appointments with doctors</li>
-                <li>• View available medical services</li>
-                <li>• Access your medical records</li>
-                <li>• Connect with healthcare providers</li>
-              </ul>
-              <Button 
-                onClick={() => router.push('/select-hospital')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Select Hospital Now
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </PatientLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
   return (
-    <PatientLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Welcome Header */}
         <div className="text-center">
           <h1 className="text-3xl font-serif font-bold text-foreground">
@@ -350,6 +294,5 @@ export default function PatientDashboard() {
           </Card>
         </div>
       </div>
-    </PatientLayout>
   )
 }

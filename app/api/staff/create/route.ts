@@ -65,6 +65,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 400 })
     }
 
+    // Create the profile record with hospital_id (the trigger might not set hospital_id correctly)
+    const { error: upsertError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: newUser.user.id,
+        email: email,
+        full_name: fullName,
+        role: role,
+        phone: phone,
+        hospital_id: profile.hospital_id
+      }, {
+        onConflict: 'id'
+      })
+
+    if (upsertError) {
+      console.error('Profile creation error:', upsertError)
+      // Don't fail the whole request, but log the error
+      console.log('Warning: Profile may not have correct hospital_id')
+    }
+
     return NextResponse.json({ 
       success: true, 
       user: newUser.user,

@@ -10,7 +10,6 @@ import {
   User, 
   Phone, 
   Mail, 
-  MapPin, 
   Calendar, 
   Heart, 
   Pill, 
@@ -88,171 +87,151 @@ export function PatientDetailView({ patient, isOpen, onClose, onEdit }: PatientD
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
+      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="sticky top-0 bg-white z-10 pb-4 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <DialogTitle className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <User className="h-6 w-6 text-blue-600" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{patient.profile.full_name}</h2>
-                <p className="text-gray-600">Patient ID: {patient.id.slice(0, 8)}</p>
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{patient.profile.full_name}</h2>
+                <p className="text-gray-600 text-sm">Patient ID: {patient.id.slice(0, 8)}</p>
               </div>
             </DialogTitle>
-            <Button onClick={() => onEdit?.(patient)} variant="outline" size="sm">
+            <Button onClick={() => onEdit?.(patient)} variant="outline" size="sm" className="flex-shrink-0">
               <Edit3 className="h-4 w-4 mr-2" />
               Edit Patient
             </Button>
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="medical">Medical Info</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="records">Records</TabsTrigger>
-            <TabsTrigger value="files">Files</TabsTrigger>
+        <Tabs defaultValue="overview" className="w-full mt-4">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="medical" className="text-xs sm:text-sm">Medical</TabsTrigger>
+            <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
+            <TabsTrigger value="records" className="text-xs sm:text-sm hidden sm:block">Records</TabsTrigger>
+            <TabsTrigger value="files" className="text-xs sm:text-sm hidden sm:block">Files</TabsTrigger>
           </TabsList>
+          
+          {/* Mobile dropdown for hidden tabs */}
+          <div className="sm:hidden mt-2">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="records" className="text-xs">Records</TabsTrigger>
+              <TabsTrigger value="files" className="text-xs">Files</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Personal Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <UserCheck className="h-5 w-5 text-blue-600" />
-                    <span>Personal Information</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">Email</p>
-                      <p className="font-medium">{patient.profile.email}</p>
-                    </div>
-                  </div>
-                  
-                  {patient.profile.phone && (
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-600">Phone</p>
-                        <p className="font-medium">{patient.profile.phone}</p>
+          <TabsContent value="overview" className="mt-6 px-2">
+            <div className="mx-auto w-full max-w-5xl space-y-8">
+              <Card className="overflow-hidden">
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Personal Information Section (no nested card) */}
+                    <div className="lg:col-span-2">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <UserCheck className="h-6 w-6 text-blue-600" />
+                          <h3 className="text-xl font-semibold">Personal Information</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        
+                        </div>
+
+                        {/* Date of Birth - Full Width Bottom Section */}
+                        <div>
+                          <div className="flex items-center space-x-4 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                            <Calendar className="h-7 w-7 text-blue-500 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-blue-600 mb-2">Date of Birth</p>
+                              <div className="flex flex-wrap items-center gap-4 sm:gap-8">
+                                <p className="font-medium text-gray-900 text-lg">
+                                  {formatDate(patient.patient_info.date_of_birth)}
+                                </p>
+                                <span className="text-lg text-blue-600 font-semibold px-4 py-2 bg-blue-100 rounded-full">
+                                  Age: {calculateAge(patient.patient_info.date_of_birth)} years
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">Date of Birth</p>
-                      <p className="font-medium">
-                        {formatDate(patient.patient_info.date_of_birth)} 
-                        <span className="text-gray-500 ml-2">
-                          (Age: {calculateAge(patient.patient_info.date_of_birth)})
-                        </span>
-                      </p>
+                    {/* Emergency Contact Section (no nested card) */}
+                    <div className="lg:col-span-1">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="h-6 w-6 text-red-600" />
+                          <h3 className="text-xl font-semibold">Emergency Contact</h3>
+                        </div>
+                        {patient.patient_info.emergency_contact_name ? (
+                          <div className="flex items-start space-x-4 p-5 bg-red-50 rounded-xl border border-red-200 w-full">
+                            <User className="h-6 w-6 text-red-500 mt-1.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-red-600 mb-1">Contact Name</p>
+                              <p className="font-medium text-gray-900 text-lg truncate" title={patient.patient_info.emergency_contact_name}>
+                                {patient.patient_info.emergency_contact_name}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 text-center w-full">
+                            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-500 italic font-medium">No emergency contact information available</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center space-x-3">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">Gender</p>
-                      <p className="font-medium capitalize">{patient.patient_info.gender}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Emergency Contact */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Shield className="h-5 w-5 text-red-600" />
-                    <span>Emergency Contact</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {patient.patient_info.emergency_contact_name ? (
-                    <>
-                      <div className="flex items-center space-x-3">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm text-gray-600">Contact Name</p>
-                          <p className="font-medium">{patient.patient_info.emergency_contact_name}</p>
+                  {/* Statistics Section inside the same container */}
+                  <div className="mt-10">
+                    <h3 className="text-xl font-semibold mb-4">Patient Statistics</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-600 mb-1">Total Appointments</p>
+                            <p className="text-3xl font-bold text-blue-900">{patient.appointments?.length || 0}</p>
+                          </div>
+                          <Calendar className="h-10 w-10 text-blue-500" />
                         </div>
                       </div>
                       
-                      {patient.patient_info.emergency_contact_phone && (
-                        <div className="flex items-center space-x-3">
-                          <Phone className="h-4 w-4 text-gray-500" />
+                      <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-600">Contact Phone</p>
-                            <p className="font-medium">{patient.patient_info.emergency_contact_phone}</p>
+                            <p className="text-sm font-medium text-green-600 mb-1">Medical Records</p>
+                            <p className="text-3xl font-bold text-green-900">{patient.medical_records?.length || 0}</p>
                           </div>
+                          <FileText className="h-10 w-10 text-green-500" />
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-gray-500 italic">No emergency contact information available</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                      </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Appointments</p>
-                      <p className="text-2xl font-bold text-gray-900">{patient.appointments?.length || 0}</p>
-                    </div>
-                    <Calendar className="h-8 w-8 text-blue-500" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Medical Records</p>
-                      <p className="text-2xl font-bold text-gray-900">{patient.medical_records?.length || 0}</p>
-                    </div>
-                    <FileText className="h-8 w-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-purple-600 mb-1">Files</p>
+                            <p className="text-3xl font-bold text-purple-900">{patient.files?.length || 0}</p>
+                          </div>
+                          <FileText className="h-10 w-10 text-purple-500" />
+                        </div>
+                      </div>
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Files</p>
-                      <p className="text-2xl font-bold text-gray-900">{patient.files?.length || 0}</p>
+                      <div className="bg-red-50 p-6 rounded-xl border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-red-600 mb-1">Blood Type</p>
+                            <p className="text-3xl font-bold text-red-900">
+                              {patient.patient_info.blood_type || 'N/A'}
+                            </p>
+                          </div>
+                          <Heart className="h-10 w-10 text-red-500" />
+                        </div>
+                      </div>
                     </div>
-                    <FileText className="h-8 w-8 text-purple-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Blood Type</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {patient.patient_info.blood_type || 'N/A'}
-                      </p>
-                    </div>
-                    <Heart className="h-8 w-8 text-red-500" />
                   </div>
                 </CardContent>
               </Card>

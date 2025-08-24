@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
 
 export default function FilesPage() {
-  const [patients, setPatients] = useState([])
+  const [patients, setPatients] = useState<any[]>([])
   const [selectedPatient, setSelectedPatient] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [showUpload, setShowUpload] = useState(false)
@@ -127,6 +127,5 @@ export default function FilesPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
   )
 }

@@ -163,6 +163,5 @@ export default function SchedulePage() {
           className="w-full"
         />
       </div>
-    </div>
   )
 }

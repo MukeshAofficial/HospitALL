@@ -1,6 +1,5 @@
 "use client"
 
-import { PatientLayout } from "@/components/patient-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -69,17 +68,14 @@ export default function PatientRecordsPage() {
 
   if (isLoading) {
     return (
-      <PatientLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </PatientLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
   return (
-    <PatientLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Medical Records</h1>
@@ -189,6 +185,5 @@ export default function PatientRecordsPage() {
           )}
         </div>
       </div>
-    </PatientLayout>
   )
 }

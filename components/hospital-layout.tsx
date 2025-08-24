@@ -57,7 +57,6 @@ export function HospitalLayout({ children }: HospitalLayoutProps) {
     { name: "Onboarding", href: "/hospital/onboarding", icon: UserCheck },
     { name: "Patients", href: "/hospital/patients", icon: Users },
     { name: "Staff", href: "/hospital/staff", icon: UserCheck },
-    { name: "Staff Management", href: "/hospital/staff-management", icon: Users },
     { name: "Schedule", href: "/hospital/schedule", icon: Calendar },
     { name: "Voice Notes", href: "/hospital/voice-notes", icon: Mic },
     { name: "Files", href: "/hospital/files", icon: FileText },

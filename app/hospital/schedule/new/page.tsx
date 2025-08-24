@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function NewScheduleAppointmentPage() {
-  const [doctors, setDoctors] = useState([])
-  const [patients, setPatients] = useState([])
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [patients, setPatients] = useState<any[]>([])
   const [formData, setFormData] = useState({
     patientId: "",
     doctorId: "",
@@ -246,7 +246,6 @@ export default function NewScheduleAppointmentPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }

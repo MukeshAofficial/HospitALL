@@ -7,13 +7,18 @@ SET search_path = public
 AS $$
 BEGIN
   -- Insert into profiles table
-  INSERT INTO public.profiles (id, email, full_name, role, phone)
+  INSERT INTO public.profiles (id, email, full_name, role, phone, hospital_id)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data ->> 'full_name', 'Unknown User'),
     COALESCE(NEW.raw_user_meta_data ->> 'role', 'patient'),
-    NEW.raw_user_meta_data ->> 'phone'
+    NEW.raw_user_meta_data ->> 'phone',
+    CASE 
+      WHEN NEW.raw_user_meta_data ->> 'hospital_id' IS NOT NULL 
+      THEN (NEW.raw_user_meta_data ->> 'hospital_id')::UUID
+      ELSE NULL
+    END
   )
   ON CONFLICT (id) DO NOTHING;
 

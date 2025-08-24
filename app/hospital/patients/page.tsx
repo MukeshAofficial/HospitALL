@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Users, Search, Plus, Eye, Edit, UserPlus } from "lucide-react"
+import { Users, Search, Plus, Eye, Edit, UserPlus, User, Phone, Heart, Calendar, AlertTriangle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface Patient {
   id: string
@@ -219,62 +220,93 @@ export default function PatientsPage() {
         </Card>
 
         {/* Patients List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredPatients.length > 0 ? (
             filteredPatients.map((patient: any) => (
-              <Card key={patient.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-bold text-gray-900">{patient.profiles.full_name}</CardTitle>
-                  <CardDescription className="text-gray-600">{patient.profiles.email}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-gray-500">Phone:</span>
-                        <p className="font-medium">{patient.profiles.phone || "Not provided"}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Gender:</span>
-                        <p className="font-medium capitalize">{patient.gender || "Not specified"}</p>
-                      </div>
+              <Card key={patient.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 h-fit">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg font-bold text-gray-900 truncate">{patient.profiles.full_name}</CardTitle>
+                      <CardDescription className="text-gray-600 break-all">{patient.profiles.email}</CardDescription>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-gray-500">Blood Type:</span>
-                        <p className="font-medium">{patient.blood_type || "Unknown"}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Age:</span>
-                        <p className="font-medium">
-                          {patient.date_of_birth 
-                            ? new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear()
-                            : "N/A"
-                          }
-                        </p>
-                      </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ml-3">
+                      <User className="h-6 w-6 text-blue-600" />
                     </div>
-                    {patient.allergies && patient.allergies.length > 0 && (
-                      <div>
-                        <span className="text-gray-500">Allergies:</span>
-                        <p className="text-xs text-orange-600 font-medium">
-                          {patient.allergies.slice(0, 2).join(", ")}
-                          {patient.allergies.length > 2 && " +more"}
-                        </p>
-                      </div>
-                    )}
                   </div>
-                  <div className="mt-4 flex space-x-2">
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Phone:</span>
+                      </div>
+                      <span className="font-medium text-sm truncate ml-2">{patient.profiles.phone || "Not provided"}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Gender:</span>
+                      </div>
+                      <span className="font-medium text-sm capitalize">{patient.gender || "Not specified"}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Heart className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Blood Type:</span>
+                      </div>
+                      <span className="font-medium text-sm">{patient.blood_type || "Unknown"}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Age:</span>
+                      </div>
+                      <span className="font-medium text-sm">
+                        {patient.date_of_birth 
+                          ? new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear()
+                          : "N/A"
+                        } years
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {patient.allergies && patient.allergies.length > 0 && (
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <span className="text-sm font-medium text-orange-600">Allergies:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {patient.allergies.slice(0, 3).map((allergy: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                            {allergy}
+                          </Badge>
+                        ))}
+                        {patient.allergies.length > 3 && (
+                          <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                            +{patient.allergies.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
                     <Button 
                       size="sm" 
                       variant="outline" 
                       onClick={() => handleViewDetails(patient)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center justify-center space-x-1 flex-1"
                     >
                       <Eye className="h-4 w-4" />
                       <span>View Details</span>
                     </Button>
-                    <Button size="sm" asChild className="flex items-center space-x-1">
+                    <Button size="sm" asChild className="flex items-center justify-center space-x-1 flex-1">
                       <Link href={`/hospital/patients/${patient.id}/edit`}>
                         <Edit className="h-4 w-4" />
                         <span>Edit</span>

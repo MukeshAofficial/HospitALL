@@ -9,11 +9,11 @@ import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
 
 export default function VoiceNotesPage() {
-  const [patients, setPatients] = useState([])
-  const [appointments, setAppointments] = useState([])
+  const [patients, setPatients] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<any[]>([])
   const [selectedPatient, setSelectedPatient] = useState("")
   const [selectedAppointment, setSelectedAppointment] = useState("")
-  const [recentTranscriptions, setRecentTranscriptions] = useState([])
+  const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
@@ -232,7 +232,6 @@ export default function VoiceNotesPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }
