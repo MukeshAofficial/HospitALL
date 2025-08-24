@@ -8,6 +8,7 @@ import { DocumentAnalyzer } from "@/components/document-analyzer"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
 import { Brain, ChevronDown, ChevronUp } from "lucide-react"
+import { parseMarkdownText, isNumberedItem, extractNumber, extractNumberedContent } from "@/lib/utils/markdown-parser"
 
 interface FileViewerProps {
   patientId: string
@@ -16,7 +17,7 @@ interface FileViewerProps {
 }
 
 export function FileViewer({ patientId, medicalRecordId, showUpload = false }: FileViewerProps) {
-  const [files, setFiles] = useState([])
+  const [files, setFiles] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [expandedAnalyzer, setExpandedAnalyzer] = useState<string | null>(null)
@@ -241,16 +242,89 @@ export function FileViewer({ patientId, medicalRecordId, showUpload = false }: F
                   )}
 
                   {file.ai_analysis && expandedAnalyzer !== file.id && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-sm font-medium text-blue-900 flex items-center">
-                          <Brain className="w-4 h-4 mr-1" />
-                          Previous AI Analysis
+                    <div className="mt-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <h5 className="text-lg font-bold text-blue-900 flex items-center">
+                          <Brain className="w-5 h-5 mr-2" />
+                          🤖 AI Analysis Summary
+                          <Badge variant="secondary" className="ml-3 bg-blue-100 text-blue-700 px-3 py-1">
+                            {file.analysis_type || 'general'}
+                          </Badge>
                         </h5>
-                        <span className="text-xs text-blue-600">{new Date(file.analyzed_at).toLocaleDateString()}</span>
+                        <span className="text-xs text-blue-600 bg-blue-100 px-3 py-1 rounded-full font-medium">
+                          📅 {new Date(file.analyzed_at).toLocaleDateString()}
+                        </span>
                       </div>
-                      <div className="text-sm text-blue-800 max-h-32 overflow-y-auto">
-                        <pre className="whitespace-pre-wrap">{file.ai_analysis}</pre>
+                      
+                      {/* Enhanced Structured Analysis Display */}
+                      <div className="space-y-3">
+                        {file.ai_analysis.split('\n').slice(0, 4).map((line: string, index: number) => {
+                          const trimmedLine = line.trim()
+                          if (trimmedLine) {
+                            // Handle main headers with emojis
+                            if (trimmedLine.match(/^[📋🔬💊🔍📄]/)) {
+                              return (
+                                <div key={index} className="bg-white bg-opacity-80 p-3 rounded-lg border border-blue-300 shadow-sm">
+                                  <h4 className="font-bold text-blue-900 text-base">{parseMarkdownText(trimmedLine)}</h4>
+                                </div>
+                              )
+                            }
+                            // Handle numbered items
+                            if (isNumberedItem(trimmedLine)) {
+                              const number = extractNumber(trimmedLine)
+                              const content = extractNumberedContent(trimmedLine)
+                              return (
+                                <div key={index} className="flex items-start space-x-3 bg-white bg-opacity-60 p-3 rounded-lg">
+                                  <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                    {number}
+                                  </span>
+                                  <p className="text-blue-800 font-medium leading-relaxed">
+                                    {parseMarkdownText(content)}
+                                  </p>
+                                </div>
+                              )
+                            }
+                            // Regular content
+                            return (
+                              <div key={index} className="flex items-start space-x-3">
+                                <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full mt-1.5 flex-shrink-0 shadow-sm" />
+                                <p className="text-blue-800 leading-relaxed font-medium">{parseMarkdownText(trimmedLine)}</p>
+                              </div>
+                            )
+                          }
+                          return null
+                        })}
+                        
+                        {file.ai_analysis.split('\n').length > 4 && (
+                          <div className="pt-3 border-t border-blue-200">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => toggleAnalyzer(file.id)}
+                              className="text-blue-700 hover:text-blue-800 hover:bg-blue-100 font-medium"
+                            >
+                              <Brain className="w-4 h-4 mr-2" />
+                              📖 View Complete Analysis
+                              <ChevronDown className="w-4 h-4 ml-2" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Quick Action Buttons */}
+                      <div className="flex gap-2 mt-4 pt-3 border-t border-blue-200">
+                        <Button variant="outline" size="sm" className="text-blue-700 border-blue-300 hover:bg-blue-50">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          📋 Copy
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-blue-700 border-blue-300 hover:bg-blue-50">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          💾 Save
+                        </Button>
                       </div>
                     </div>
                   )}

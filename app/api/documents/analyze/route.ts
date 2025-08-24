@@ -6,14 +6,16 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Check authentication
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
+    
     if (authError || !user) {
+      console.error('Authentication error:', authError)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -40,37 +42,71 @@ export async function POST(request: NextRequest) {
     let prompt = ""
     switch (analysisType) {
       case "medical":
-        prompt = `Analyze this medical document and provide a comprehensive summary including:
-        1. Document Type (lab results, prescription, medical report, etc.)
-        2. Key Findings or Results
-        3. Important Values or Measurements
-        4. Recommendations or Next Steps
-        5. Any Concerning Items that need attention
+        prompt = `As a medical AI assistant, analyze this medical document and provide a comprehensive, patient-friendly summary:
         
-        Please format the response in a clear, structured manner that a patient can easily understand.`
+        📋 **DOCUMENT ANALYSIS**
+        1. Document Type: Identify the type of medical document
+        2. Key Findings: Summarize the most important medical findings
+        3. Critical Values: Highlight any abnormal or concerning measurements
+        4. Recommendations: List any medical recommendations or next steps
+        5. Follow-up Care: Identify any required follow-up appointments or tests
+        6. Patient Action Items: What the patient should do or watch for
+        
+        Format your response clearly with headers and bullet points. Use simple medical terminology that patients can understand.`
         break
       case "lab":
-        prompt = `Analyze this lab report and provide:
-        1. Test Types Performed
-        2. Results Summary (normal/abnormal values)
-        3. Reference Ranges
-        4. Clinical Significance
-        5. Recommendations for follow-up
+        prompt = `Analyze this laboratory report as a medical AI and provide:
         
-        Explain any abnormal values in simple terms.`
+        🔬 **LAB RESULTS ANALYSIS**
+        1. Tests Performed: List all tests conducted
+        2. Normal vs. Abnormal: Categorize results (🟢 Normal, 🟡 Borderline, 🔴 Abnormal)
+        3. Reference Ranges: Include normal ranges for context
+        4. Clinical Significance: Explain what abnormal values might indicate
+        5. Trending: If multiple tests, note any patterns or trends
+        6. Recommendations: Suggest follow-up actions or lifestyle changes
+        
+        Use clear formatting and explain medical terms in patient-friendly language.`
         break
       case "prescription":
-        prompt = `Analyze this prescription and provide:
-        1. Medications Listed
-        2. Dosages and Instructions
-        3. Purpose of each medication
-        4. Important warnings or side effects
-        5. Duration of treatment
+        prompt = `Analyze this prescription document and provide:
         
-        Present in patient-friendly language.`
+        💊 **PRESCRIPTION ANALYSIS**
+        1. Medications Listed: All prescribed medications with generic names
+        2. Dosage & Instructions: Clear dosing schedule and administration
+        3. Purpose: Why each medication was prescribed
+        4. Duration: How long to take each medication
+        5. Important Warnings: Key side effects and contraindications
+        6. Drug Interactions: Notable interactions to be aware of
+        7. Patient Tips: Helpful reminders for taking medications safely
+        
+        Present information in a clear, organized format that patients can reference easily.`
+        break
+      case "imaging":
+        prompt = `Analyze this medical imaging report and provide:
+        
+        🔍 **IMAGING ANALYSIS**
+        1. Imaging Type: Type of scan or imaging study performed
+        2. Areas Examined: Anatomical regions studied
+        3. Key Findings: Important observations from the imaging
+        4. Normal Structures: What appears normal
+        5. Abnormalities: Any concerning findings (explained simply)
+        6. Clinical Correlation: How findings relate to symptoms
+        7. Next Steps: Recommended follow-up or additional imaging
+        
+        Explain findings in patient-friendly terms while maintaining accuracy.`
         break
       default:
-        prompt = `Analyze this document and provide a clear, comprehensive summary of its contents. Focus on key information that would be important for a patient to understand about their healthcare.`
+        prompt = `Analyze this healthcare document and provide a comprehensive, patient-centered summary:
+        
+        📄 **DOCUMENT SUMMARY**
+        1. Document Purpose: What this document is for
+        2. Key Information: Most important points for the patient
+        3. Medical Terms: Simplified explanations of complex terms
+        4. Action Items: What the patient should do next
+        5. Questions to Ask: Suggested questions for healthcare providers
+        6. Important Notes: Critical information to remember
+        
+        Use clear, compassionate language that helps patients understand their healthcare information.`
     }
 
     const result = await model.generateContent([

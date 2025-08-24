@@ -22,38 +22,26 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
       const supabase = createClient()
 
       try {
-        console.log("[v0] AuthGuard: Starting auth check")
-
-        const {
-          data: { user },
+        // Only log important auth events, not every check
+        const {          data: { user },
           error,
         } = await supabase.auth.getUser()
 
-        console.log("[v0] AuthGuard: User data:", user ? { id: user.id, email: user.email } : null)
-        console.log("[v0] AuthGuard: Auth error:", error)
-
         if (error || !user) {
-          console.log("[v0] AuthGuard: No user found, redirecting to:", redirectTo)
           router.push(redirectTo)
           return
         }
 
         if (allowedRoles) {
-          console.log("[v0] AuthGuard: Checking roles, allowed:", allowedRoles)
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("role, hospital_id, full_name")
             .eq("id", user.id)
             .single()
 
-          console.log("[v0] AuthGuard: Profile data:", profile)
-          console.log("[v0] AuthGuard: Profile error:", profileError)
-
           if (profileError) {
-            console.error("[v0] AuthGuard: Profile fetch error:", profileError)
             // If profile doesn't exist, redirect to appropriate onboarding
             if (profileError.code === 'PGRST116') {
-              console.log("[v0] AuthGuard: No profile found, redirecting to signup")
               router.push("/auth/signup")
               return
             }
@@ -63,7 +51,6 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
           }
 
           if (!profile || !allowedRoles.includes(profile.role)) {
-            console.log("[v0] AuthGuard: Role check failed, user role:", profile?.role, "redirecting to /unauthorized")
             router.push("/unauthorized")
             return
           }
@@ -80,7 +67,6 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
               .single()
             
             if (patientError) {
-              console.error("[v0] AuthGuard: Patient fetch error:", patientError)
               router.push("/auth/login")
               return
             }
@@ -89,7 +75,6 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
             if (currentPath !== '/patient/profile-completion') {
               // Check if basic profile information is complete
               if (!patient.date_of_birth || !patient.emergency_contact_name) {
-                console.log("[v0] AuthGuard: Patient profile incomplete, redirecting to profile completion")
                 router.push("/patient/profile-completion")
                 return
               }
@@ -100,20 +85,16 @@ export function AuthGuard({ children, allowedRoles, redirectTo = "/auth/login" }
             
             if (appointmentRoutes.some(route => currentPath.startsWith(route))) {
               if (!patient.hospital_id) {
-                console.log("[v0] AuthGuard: Patient trying to access appointments without hospital selection")
                 router.push("/select-hospital")
                 return
               }
             }
           }
-
-          console.log("[v0] AuthGuard: Role check passed, user role:", profile.role)
         }
 
-        console.log("[v0] AuthGuard: Authorization successful")
         setIsAuthorized(true)
       } catch (error) {
-        console.error("[v0] AuthGuard: Auth check failed:", error)
+        console.error("[AuthGuard] Auth check failed:", error)
         router.push(redirectTo)
       } finally {
         setIsLoading(false)

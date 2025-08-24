@@ -16,61 +16,176 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     const fetchPatientData = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+          error: authError
+        } = await supabase.auth.getUser()
 
-      if (user) {
-        // Fetch patient profile with hospital info
-        const { data: patient } = await supabase
+        if (authError || !user) {
+          console.error('Auth error:', authError)
+          setIsLoading(false)
+          return
+        }
+
+        // First, try to fetch just the patient record
+        console.log('Fetching patient data for user:', user.id)
+        
+        const { data: patient, error: patientError } = await supabase
           .from("patients")
-          .select(`
-            *, 
-            profiles!inner(*),
-            hospitals(id, name)
-          `)
+          .select('*')
           .eq("profile_id", user.id)
-          .single()
+          .maybeSingle()
 
-        setPatientData(patient)
+        if (patientError) {
+          console.error('Patient fetch error:', patientError)
+          console.error('Patient fetch error details:', {
+            message: patientError.message,
+            details: patientError.details,
+            hint: patientError.hint,
+            code: patientError.code
+          })
+        }
+
+        // If patient exists, fetch profile and hospital data separately
+        let profileData = null
+        let hospitalData = null
+        
+        if (patient) {
+          // Fetch profile data
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, phone')
+            .eq('id', user.id)
+            .single()
+            
+          if (profileError) {
+            console.error('Profile fetch error:', profileError)
+          } else {
+            profileData = profile
+          }
+          
+          // Fetch hospital data if patient has hospital_id
+          if (patient.hospital_id) {
+            const { data: hospital, error: hospitalError } = await supabase
+              .from('hospitals')
+              .select('id, name, city, state')
+              .eq('id', patient.hospital_id)
+              .single()
+              
+            if (hospitalError) {
+              console.error('Hospital fetch error:', hospitalError)
+            } else {
+              hospitalData = hospital
+            }
+          }
+          
+          // Combine the data
+          const combinedPatient = {
+            ...patient,
+            profiles: profileData,
+            hospitals: hospitalData
+          }
+          
+          setPatientData(combinedPatient)
+        }
+        
+        // If no patient record exists, create one
+        if (!patient && !patientError) {
+          console.log('No patient record found, creating one...')
+          
+          // First get the profile to ensure it exists
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+
+          if (profile) {
+            const { data: newPatient, error: createError } = await supabase
+              .from('patients')
+              .insert({
+                profile_id: user.id
+              })
+              .select('*')
+              .single()
+
+            if (createError) {
+              console.error('Error creating patient record:', createError)
+            } else {
+              console.log('Successfully created patient record')
+              const combinedNewPatient = {
+                ...newPatient,
+                profiles: {
+                  id: profile.id,
+                  full_name: profile.full_name,
+                  email: profile.email,
+                  phone: profile.phone
+                }
+              }
+              setPatientData(combinedNewPatient)
+              profileData = profile
+            }
+          } else {
+            console.error('No profile found for user')
+          }
+        }
         
         // Set hospital name if available
-        const hospitalInfo = Array.isArray(patient?.hospitals) ? patient.hospitals[0] : patient?.hospitals
-        setHospitalName(hospitalInfo?.name || null)
+        setHospitalName(hospitalData?.name || null)
+        
+        // Get the current patient data for appointments and records fetching
+        const currentPatient = patient || (patientData ? patientData : null)
 
-        // Fetch upcoming appointments
-        const { data: appointments } = await supabase
-          .from("appointments")
-          .select(
-            `
-            *,
-            profiles!appointments_doctor_id_fkey(full_name)
-          `,
-          )
-          .eq("patient_id", patient?.id)
-          .gte("appointment_date", new Date().toISOString())
-          .order("appointment_date", { ascending: true })
-          .limit(3)
+        // Only fetch additional data if we have a patient record
+        if (currentPatient?.id) {
+          // Fetch upcoming appointments (next 30 days)
+          const thirtyDaysFromNow = new Date()
+          thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+          
+          const { data: appointments, error: appointmentsError } = await supabase
+            .from("appointments")
+            .select(`
+              *,
+              profiles!appointments_doctor_id_fkey(full_name)
+            `)
+            .eq("patient_id", currentPatient.id)
+            .gte("appointment_date", new Date().toISOString())
+            .lte("appointment_date", thirtyDaysFromNow.toISOString())
+            .order("appointment_date", { ascending: true })
+            .limit(5)
 
-        setUpcomingAppointments(appointments || [])
+          if (appointmentsError) {
+            console.error('Appointments fetch error:', appointmentsError)
+          } else {
+            setUpcomingAppointments(appointments || [])
+          }
 
-        // Fetch recent medical records
-        const { data: records } = await supabase
-          .from("medical_records")
-          .select(
-            `
-            *,
-            profiles!medical_records_doctor_id_fkey(full_name)
-          `,
-          )
-          .eq("patient_id", patient?.id)
-          .order("created_at", { ascending: false })
-          .limit(3)
+          // Fetch recent medical records
+          const { data: records, error: recordsError } = await supabase
+            .from("medical_records")
+            .select(`
+              *,
+              profiles!medical_records_doctor_id_fkey(full_name)
+            `)
+            .eq("patient_id", currentPatient.id)
+            .order("created_at", { ascending: false })
+            .limit(5)
 
-        setRecentRecords(records || [])
+          if (recordsError) {
+            console.error('Medical records fetch error:', recordsError)
+          } else {
+            setRecentRecords(records || [])
+          }
+        } else {
+          console.log('No patient ID available, skipping appointments and records fetch')
+        }
+      } catch (error) {
+        console.error('Unexpected error:', error)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     fetchPatientData()
@@ -89,17 +204,22 @@ export default function PatientDashboard() {
         {/* Welcome Header */}
         <div className="text-center">
           <h1 className="text-3xl font-serif font-bold text-foreground">
-            Welcome back, {patientData?.profiles?.full_name}!
+            Welcome back, {patientData?.profiles?.full_name || 'Patient'}!
           </h1>
           <p className="text-muted-foreground mt-2">Here's an overview of your health information</p>
           {hospitalName && (
             <p className="text-sm text-blue-600 mt-1">Receiving care at {hospitalName}</p>
           )}
+          {!patientData && (
+            <p className="text-sm text-orange-600 mt-2">
+              Please complete your profile to access all features
+            </p>
+          )}
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="text-center">
+          <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-1/10 rounded-full flex items-center justify-center mb-2">
                 <Calendar className="h-6 w-6 text-chart-1" />
@@ -109,10 +229,15 @@ export default function PatientDashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-chart-1">{upcomingAppointments.length}</div>
               <p className="text-sm text-muted-foreground">Next 30 days</p>
+              {upcomingAppointments.length === 0 && (
+                <Button size="sm" className="mt-2" asChild>
+                  <Link href="/appointments/new">Book Now</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="text-center">
+          <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-2/10 rounded-full flex items-center justify-center mb-2">
                 <FileText className="h-6 w-6 text-chart-2" />
@@ -125,7 +250,7 @@ export default function PatientDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="text-center">
+          <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="mx-auto w-12 h-12 bg-chart-3/10 rounded-full flex items-center justify-center mb-2">
                 <Heart className="h-6 w-6 text-chart-3" />
@@ -133,8 +258,15 @@ export default function PatientDashboard() {
               <CardTitle className="text-lg font-serif">Health Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-chart-3">Good</div>
-              <p className="text-sm text-muted-foreground">Overall health</p>
+              <div className="text-2xl font-bold text-chart-3">
+                {patientData?.medical_history || patientData?.current_medications?.length > 0 
+                  ? 'Under Care' 
+                  : 'Good'
+                }
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {hospitalName ? `At ${hospitalName}` : 'Overall health'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -151,7 +283,7 @@ export default function PatientDashboard() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Email:</span>
-                  <span className="text-sm">{patientData?.profiles?.email}</span>
+                  <span className="text-sm">{patientData?.profiles?.email || 'Not provided'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Phone:</span>
@@ -161,21 +293,39 @@ export default function PatientDashboard() {
                   <span className="text-muted-foreground">Date of Birth:</span>
                   <span className="text-sm">
                     {patientData?.date_of_birth
-                      ? new Date(patientData.date_of_birth).toLocaleDateString()
+                      ? new Date(patientData.date_of_birth).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long', 
+                          day: 'numeric'
+                        })
                       : "Not provided"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Blood Type:</span>
-                  <span className="text-sm">{patientData?.blood_type || "Unknown"}</span>
+                  <span className="text-sm font-medium text-red-600">{patientData?.blood_type || "Unknown"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Gender:</span>
                   <span className="text-sm capitalize">{patientData?.gender || "Not specified"}</span>
                 </div>
+                {patientData?.emergency_contact_name && (
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Emergency Contact:</span>
+                      <span className="text-sm">{patientData.emergency_contact_name}</span>
+                    </div>
+                    {patientData?.emergency_contact_phone && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Emergency Phone:</span>
+                        <span className="text-sm">{patientData.emergency_contact_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <Button className="w-full mt-4 bg-transparent" variant="outline" asChild>
-                <Link href="/patient/profile">Update Profile</Link>
+                <Link href="/patient/profile-completion">Update Profile</Link>
               </Button>
             </CardContent>
           </Card>
@@ -190,15 +340,26 @@ export default function PatientDashboard() {
               <div className="space-y-3">
                 {upcomingAppointments.length > 0 ? (
                   upcomingAppointments.map((appointment: any) => (
-                    <div key={appointment.id} className="p-3 bg-muted rounded-lg">
+                    <div key={appointment.id} className="p-3 bg-muted rounded-lg border border-gray-200">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-sm">Dr. {appointment.profiles?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{appointment.appointment_type}</p>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                            Dr. {appointment.profiles?.full_name || 'Unknown Doctor'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {appointment.appointment_type}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Duration: {appointment.duration_minutes || 30} minutes
+                          </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium">
-                            {new Date(appointment.appointment_date).toLocaleDateString()}
+                          <p className="text-sm font-medium text-blue-600">
+                            {new Date(appointment.appointment_date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(appointment.appointment_date).toLocaleTimeString([], {
@@ -206,12 +367,24 @@ export default function PatientDashboard() {
                               minute: "2-digit",
                             })}
                           </p>
+                          <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
+                            appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                            appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {appointment.status}
+                          </span>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">No upcoming appointments</p>
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-muted-foreground">No upcoming appointments</p>
+                    <p className="text-xs text-muted-foreground mt-1">Book your next appointment to get started</p>
+                  </div>
                 )}
               </div>
               <Button className="w-full mt-4" asChild>
@@ -230,25 +403,52 @@ export default function PatientDashboard() {
               <div className="space-y-3">
                 {recentRecords.length > 0 ? (
                   recentRecords.map((record: any) => (
-                    <div key={record.id} className="p-3 bg-muted rounded-lg">
+                    <div key={record.id} className="p-3 bg-muted rounded-lg border border-gray-200">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-sm">{record.title}</p>
-                          <p className="text-xs text-muted-foreground">Dr. {record.profiles?.full_name}</p>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-green-500" />
+                            {record.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            By Dr. {record.profiles?.full_name || 'Unknown Doctor'}
+                          </p>
+                          {record.content && (
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                              {record.content.length > 80 
+                                ? record.content.substring(0, 80) + '...' 
+                                : record.content
+                              }
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">
-                            {new Date(record.created_at).toLocaleDateString()}
+                            {new Date(record.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
                           </p>
-                          <span className="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded">
-                            {record.record_type}
+                          <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
+                            record.record_type === 'diagnosis' ? 'bg-red-100 text-red-800' :
+                            record.record_type === 'treatment' ? 'bg-blue-100 text-blue-800' :
+                            record.record_type === 'prescription' ? 'bg-green-100 text-green-800' :
+                            record.record_type === 'lab_result' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {record.record_type?.replace('_', ' ')}
                           </span>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">No medical records yet</p>
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-muted-foreground">No medical records yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Your medical records will appear here after appointments</p>
+                  </div>
                 )}
               </div>
               <Button className="w-full mt-4 bg-transparent" variant="outline" asChild>
